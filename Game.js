@@ -120,11 +120,10 @@ class Hand {
 
 class Game {
   constructor(gameId) {
-    console.log('[Game#constructor]');
-    this.startNewGame(gameId);
+    this.setupNewGame(gameId);
   }
 
-  startNewGame(gameId) {
+  setupNewGame(gameId) {
     this.nextTurn = 'P1';
     this.isGameOver = false;
     this.gameId = gameId;
@@ -144,15 +143,22 @@ class Game {
     this.discardPile = [];
     this.deck = new Deck();
     this.deal();
-    this.message = '';
+    this.message = 'All players can see their respective cards';
     this.lastInteraction = Date.now();
     this.swap = {
       swapInProgress: false,
       whoIsPlaying: null,
       opponent: null,
       cardOfSelfToSwap: null,
+      whichCardOfOpponentToSwap: null,
       cardOfOpponentToSwap: null
-    }
+    };
+    this.hasGameStarted = false;
+  }
+
+  startGame() {
+    this.resetRound()
+    this.hasGameStarted = true;
   }
 
   getGameStateJSON() {
@@ -174,8 +180,11 @@ class Game {
       isGame: true,
       nextTurn: this.nextTurn,
       swapInProgress: this.swap.swapInProgress,
-      topDiscardCard: this.discardPile.length > 0 ? [this.discardPile.length - 1] : null,
-      drawnCard: this.drawnCard
+      topDiscardCard: this.discardPile.length > 0
+        ? this.discardPile[this.discardPile.length - 1]
+        : null,
+      drawnCard: this.drawnCard,
+      hasGameStarted: this.hasGameStarted
     }
   }
 
@@ -184,11 +193,10 @@ class Game {
       this.player1.hand.addCard(this.deck.draw());
       this.player2.hand.addCard(this.deck.draw());
     }
-    console.log('[Game#deal] player hands:', this.player1Hand, this.player2Hand);
   }
 
-  determineNextTurn() {
-    this.nextTurn = this.nextTurn === 'P1' ? 'P2' : 'P1'
+  determineNextTurn(currentTurn) {
+    return currentTurn === 'P1' ? 'P2' : 'P1'
   }
 
   shuffleHand(whoIsPlaying, whoseCardsToShuffle) {
@@ -221,11 +229,11 @@ class Game {
   swapCardPart1(whoIsPlaying, whichCardOfOpponentToSwap) {
     this.swap.swapInProgress = true;
     this.swap.whoIsPlaying = whoIsPlaying;
+    this.swap.whichCardOfOpponentToSwap = whichCardOfOpponentToSwap;
     if (whoIsPlaying === 'P1' && whoseCardToSwap === 'P2') {
       this.swap.cardOfOpponentToSwap = this.player2.hand.getCards()[whichCardOfOpponentToSwap];
     } else if (whoIsPlaying === 'P2' && whoseCardToSwap === 'P1') {
       this.swap.cardOfOpponentToSwap = this.player1.hand.getCards()[whichCardOfOpponentToSwap];
-      this.swap.cardOfSelfToSwap = this.player2.hand.getCards()[whichCardOfSelfToSwap];
     }
     this.message = 'Choose one of your cards to swap.';
   }
@@ -236,14 +244,16 @@ class Game {
       this.player2.hand.replaceCard(cardOfSelf, this.swap.cardOfOpponentToSwap);
       this.player1.hand.replaceCard(this.swap.cardOfOpponent, cardOfSelf);
     } else if (whoIsPlaying === 'P2' && this.swap.opponent === 'P1') {
+      const cardOfSelf = this.player2.hand.getCards()[whichCardOfSelfToSwap];
       this.player1.hand.replaceCard(cardOfSelf, this.swap.cardOfOpponentToSwap);
       this.player2.hand.replaceCard(this.swap.cardOfOpponent, cardOfSelf);
     }
-    this.message = `${whoIsPlaying} has replaced their card #${whichCardOfSelfToSwap + 1} with ${this.swap.opponent}'s card #${this.swap.cardOfOpponentToSwap + 1}`;
+    this.message = `${whoIsPlaying} has replaced their card #${whichCardOfSelfToSwap + 1} with ${this.swap.opponent}'s card #${this.swap.whichCardOfOpponentToSwap + 1}`;
   }
 
   discard(whoIsPlaying, card) {
     this.discardPile.push(card);
+    this.drawnCard = null;
     switch (card.value) {
       case 'J':
         if (whoIsPlaying === 'P1') {
@@ -278,21 +288,37 @@ class Game {
     }
   }
 
-  endTurn() {
-    this.player1.hand.setFaceUp(false)
-    this.player2.hand.setFaceUp(false)
-    this.message = '';
+  resetRound() {
     this.swap = {
       swapInProgress: false,
       whoIsPlaying: null,
       opponent: null,
       cardOfSelfToSwap: null,
-      cardOfOpponentToSwap: null
+      cardOfOpponentToSwap: null,
+      whichCardOfOpponentToSwap: null
     }
+    this.player1.hand.setFaceUp(false)
+    this.player2.hand.setFaceUp(false)
+    this.player1.enableRevealHand = false;
+    this.player1.enableShuffleCards = false;
+    this.player1.enableSwapCards = false;
+    this.player2.enableRevealHand = false;
+    this.player2.enableShuffleCards = false;
+    this.player2.enableSwapCards = false;
+    this.setPlayerTurn(this.nextTurn);
+  }
+
+  setPlayerTurn(player) {
+    this.message = `${player}'s turn`;
+  }
+
+  endTurn() {
+    this.resetRound();
     if (this.checkIfDeckIsEmpty()) {
       this.endGame();
     } else {
-      this.determineNextTurn();
+      this.nextTurn = this.determineNextTurn(this.nextTurn);
+      this.setPlayerTurn(this.nextTurn);
     }
   }
 
@@ -304,19 +330,18 @@ class Game {
 
   draw() {
     this.drawnCard = this.deck.draw();
-    this.lastInteraction = Date.now();
+    this.message = 'You can either discard or replace with one of the cards in your hand';
   }
 
   keepInHand(whoIsPlaying, drawnCard, cardPosition) {
+    this.drawnCard = null;
+    let previousCardInHand;
     if (whoIsPlaying === 'P1') {
-      this.player1.drawnCard = null;
-      const previousCardInHand = this.player1.hand.replaceCard(drawnCard, cardPosition);
-      this.discard('P1', previousCardInHand);
+      previousCardInHand = this.player1.hand.replaceCard(drawnCard, cardPosition);
     } else if (whoIsPlaying === 'P2') {
-      this.player2.drawnCard = null;
-      const previousCardInHand = this.player2.hand.replaceCard(drawnCard, cardPosition);
-      this.discard('P2', previousCardInHand);
+      previousCardInHand = this.player2.hand.replaceCard(drawnCard, cardPosition);
     }
+    this.discard(whoIsPlaying, previousCardInHand);
   }
 
   checkIfDeckIsEmpty() {

@@ -1,27 +1,10 @@
 import express from 'express'
-import http from 'http';
-import socketio from 'socket.io';
-import bodyParser from 'body-parser'
-import path from 'path'
-import template from './src/template'
 import ssr from './src/server'
-import { Game, GamesManager } from './Game';
+import template from './src/template'
+import { GamesManager, Game } from './Game'
+
 
 const app = express()
-const httpServer = http.createServer(app)
-const io = socketio(httpServer);
-
-// Serving static files
-app.use('/assets', express.static(path.resolve(__dirname, 'assets')));
-app.use('/game/assets', express.static(path.resolve(__dirname, 'assets')));
-// for parsing application/json
-app.use(bodyParser.json());
-// hide powered by express
-app.disable('x-powered-by');
-
-// start the server
-httpServer.listen(process.env.PORT || 3000);
-
 
 const gamesMgr = new GamesManager();
 
@@ -32,99 +15,130 @@ app.get('/', (_, res) => {
   res.send(response);
 });
 
-// Game pages
-app.get('/game/:gameId', (req, res) => {
-  const gameId = req.params.gameId.toLowerCase();
+const handleNewGame = ({ gameId }) => {
   if (!gamesMgr.hasGame(gameId)) {
     const game = new Game(gameId);
     gamesMgr.addGame(game);
   }
   const game = gamesMgr.getGame(gameId);
-  const gameState = game.getGameStateJSON();
-  console.log(`[/game/${gameId}] gameState:`, gameState);
+  return game.getGameStateJSON();
+}
+// Game pages
+app.get('/game/:gameId', (req, res) => {
+  const gameId = req.params.gameId.toLowerCase();
+  const gameState = handleNewGame({ gameId })
   const content  = ssr('game', gameState)
   const response = template(content, gameState)
   res.send(response);
 });
 
 // Draw
-app.get('/api/draw-card', (req, res) => {
-  const { gameId, whoIsPlaying } = req.query;
+const handleDrawCard = ({ gameId, whoIsPlaying }) => {
   const game = gamesMgr.getGame(gameId);
   game.draw(whoIsPlaying);
-  const gameState = game.getGameStateJSON()
+  return game.getGameStateJSON()
+}
+app.get('/api/draw-card', (req, res) => {
+  const { gameId, whoIsPlaying } = req.query;
+  const gameState = handleDrawCard({ gameId, whoIsPlaying })
   res.send({ gameState });
   io.emit('game-state-update', { gameState });
 });
 
 // Keep in hand
-app.post('/api/keep-in-hand', (req, res) => {
-  const { gameId, whoIsPlaying, drawnCard, cardPosition } = req.params
+const handleKeepInHand = ({ gameId, whoIsPlaying, drawnCard, cardPosition }) => {
   const game = gamesMgr.getGame(gameId);
   game.keepInHand(whoIsPlaying, drawnCard, cardPosition);
-  const gameState = game.getGameStateJSON();
+  return game.getGameStateJSON();
+}
+app.post('/api/keep-in-hand', (req, res) => {
+  const { gameId, whoIsPlaying, drawnCard, cardPosition } = req.params
+  const gameState = handleKeepInHand({
+    gameId,
+    whoIsPlaying,
+    drawnCard,
+    cardPosition
+  })
   res.send({ gameState });
   io.emit('game-state-update', { gameState });
 });
 
-// Discard
-app.post('/api/discard-drawn-card', (req, res) => {
-  const { gameId, whoIsPlaying, drawnCard } = req.params
-  console.log('[discard-drawn-card]', req.params)
+// Discard drawn card
+const handleDiscardDrawnCard = ({ gameId, whoIsPlaying, drawnCard }) => {
   const game = gamesMgr.getGame(gameId);
   game.discard(whoIsPlaying, drawnCard);
-  const gameState = game.getGameStateJSON();
+  return game.getGameStateJSON();
+}
+app.post('/api/discard-drawn-card', (req, res) => {
+  const { gameId, whoIsPlaying, drawnCard } = req.params
+  const gameState = handleDiscardDrawnCard({ gameId, whoIsPlaying, drawnCard });
   res.send({ gameState });
   io.emit('game-state-update', { gameState });
 })
 
 // End turn
-app.post('/api/end-turn', (req, res) => {
-  const { gameId } = req.params
+const handleEndTurn = ({ gameId }) => {
   const game = gamesMgr.getGame(gameId);
   game.endTurn();
-  const gameState = game.getGameStateJSON();
+  return game.getGameStateJSON();
+}
+app.post('/api/end-turn', (req, res) => {
+  const { gameId } = req.params
+  const gameState = handleEndTurn({ gameId })
   res.send({ gameState });
+  io.emit('game-state-update', { gameState });
+})
+
+// Start game
+const handleStartGame = ({ gameId }) => {
+  const game = gamesMgr.getGame(gameId)
+  game.startGame()
+  return game.getGameStateJSON()
+}
+app.post('/api/start-game', (req, res) => {
+  const { gameId } = req.params;
+  const gameState = handleStartGame({ gameId })
+  res.send({ gameState })
   io.emit('game-state-update', { gameState });
 })
 
 // K, 10: Reveal my hand or another player's hand
-app.get('/api/reveal-hand', (req, res) => {
-  console.log('[reveal-hand] req.query:', req.query);
-  const { gameId, whoIsPlaying, whoseHandToReveal } = req.query
-
+const handleRevealHand = ({ gameId, whoIsPlaying, whoseHandToReveal }) => {
   const game = gamesMgr.getGame(gameId);
   game.revealHand(whoIsPlaying, whoseHandToReveal);
-  const gameState = game.getGameStateJSON();
+  return game.getGameStateJSON();
+}
+app.get('/api/reveal-hand', (req, res) => {
+  const { gameId, whoIsPlaying, whoseHandToReveal } = req.query
+  const gameState = handleRevealHand({ gameId, whoIsPlaying, whoseHandToReveal });
   res.send({ gameState });
-  console.log('[api/reveal-hand] gameState:', gameState);
   io.emit('game-state-update', { gameState });
 })
 
 // J: Shuffle another person's cards
-app.post('/api/shuffle-hand', (req, res) => {
-  const { gameId, whoIsPlaying, whoseCardsToShuffle } = req.params
+const handleShuffleHand = ({ gameId, whoIsPlaying, whoseCardsToShuffle }) => {
   const game = gamesMgr.getGame(gameId);
   game.shuffleHand(whoIsPlaying, whoseCardsToShuffle);
-  const gameState = game.getGameStateJSON();
+  return game.getGameStateJSON();
+}
+app.post('/api/shuffle-hand', (req, res) => {
+  const { gameId, whoIsPlaying, whoseCardsToShuffle } = req.params
+  const gameState = handleShuffleHand({ gameId, whoIsPlaying, whoseCardsToShuffle });
   res.send({ gameState });
   io.emit('game-state-update', { gameState });
 })
 
 // Q: Swap with another person's card
-app.post('/api/swap-card-part-2', (req, res) => {
-  const {
-    gameId,
-    whoIsPlaying,
-    whichCardOfSelfToSwap,
-  } = req.params
+const handleSwapCardPart1 = ({
+  gameId,
+  whoIsPlaying,
+  whoseCardToSwap,
+  whichCardOfOpponentToSwap
+}) => {
   const game = gamesMgr.getGame(gameId);
-  game.swapCardPart2(whoIsPlaying, whichCardOfSelfToSwap);
-  const gameState = game.getGameStateJSON();
-  res.send({ gameState });
-  io.emit('game-state-update', { gameState });
-})
-
+  game.swapCardPart1(whoIsPlaying, whoseCardToSwap, whichCardOfOpponentToSwap);
+  return game.getGameStateJSON();
+}
 app.post('/api/swap-card-part-1', (req, res) => {
   const {
     gameId,
@@ -132,19 +146,37 @@ app.post('/api/swap-card-part-1', (req, res) => {
     whoseCardToSwap,
     whichCardOfOpponentToSwap
   } = req.params;
+  const gameState = handleSwapCardPart1({
+    gameId,
+    whoIsPlaying,
+    whoseCardToSwap,
+    whichCardOfOpponentToSwap
+  })
+  res.send({ gameState });
+  io.emit('game-state-update', { gameState });
+})
+
+const handleSwapCardPart2 = ({ gameId, whoIsPlaying, whichCardOfSelfToSwap }) => {
   const game = gamesMgr.getGame(gameId);
-  game.swapCardPart1(whoIsPlaying, whoseCardToSwap, whichCardOfOpponentToSwap);
-  const gameState = game.getGameStateJSON();
+  game.swapCardPart2(whoIsPlaying, whichCardOfSelfToSwap);
+  return game.getGameStateJSON();
+}
+app.post('/api/swap-card-part-2', (req, res) => {
+  const { gameId, whoIsPlaying, whichCardOfSelfToSwap } = req.params
+  const gameState = handleSwapCardPart2({ gameId, whoIsPlaying, whichCardOfSelfToSwap });
   res.send({ gameState });
   io.emit('game-state-update', { gameState });
 })
 
 // Play again
+const handlePlayAgain = ({ gameId }) => {
+  const game = gamesMgr.getGame(gameId);
+  game.setupNewGame(gameId);
+  return game.getGameStateJSON();
+}
 app.post('/api/new-game', (req, res) => {
   const { gameId } = req.params;
-  const game = gamesMgr.getGame(gameId);
-  game.startNewGame(gameId);
-  const gameState = game.getGameStateJSON();
+  const gameState = handlePlayAgain({ gameId })
   res.send({ gameState });
   io.emit('game-state-update', { gameState });
 })
@@ -160,3 +192,18 @@ setInterval(
   },
   86400000 // 24hrs
 );
+
+module.exports = {
+  app,
+  handleNewGame,
+  handleStartGame,
+  handleRevealHand,
+  handleDrawCard,
+  handleDiscardDrawnCard,
+  handleEndTurn,
+  handleKeepInHand,
+  handleShuffleHand,
+  handleSwapCardPart1,
+  handleSwapCardPart2,
+  gamesMgr
+}

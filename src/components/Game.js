@@ -17,6 +17,7 @@ class Game extends Component {
     this.handleSwapCardPart2 = this.handleSwapCardPart2.bind(this);
     this.handleDiscardDrawnCard = this.handleDiscardDrawnCard.bind(this);
     this.handleDrawCard = this.handleDrawCard.bind(this);
+    this.handleStartGame = this.handleStartGame.bind(this);
     this.handleEndTurn = this.handleEndTurn.bind(this);
     this.handlePlayerChange = this.handlePlayerChange.bind(this);
   }
@@ -179,6 +180,26 @@ class Game extends Component {
       })
   }
 
+  handleStartGame() {
+    this.setState({ loading: true })
+    fetch('/api/start-game', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        gameId: this.state.gameId
+      })
+    })
+      .then(response => response.json())
+      .then(({ data }) => {
+        this.updateGameState({ ...data, loading: false })
+      })
+      .catch((error) => {
+        console.log('Error:', error);
+        this.setState({ loading: false, message: error })
+      })
+
+  }
+
   handleEndTurn() {
     this.setState({ loading: true })
     fetch('/api/end-turn', {
@@ -209,7 +230,8 @@ class Game extends Component {
       nextTurn,
       swapInProgress,
       topDiscardCard,
-      drawnCard
+      drawnCard,
+      hasGameStarted
     } = this.state;
 
     const colStyle = {
@@ -263,6 +285,8 @@ class Game extends Component {
             deck={deck}
             handleDrawCard={this.handleDrawCard}
             handleDiscardDrawnCard={this.handleDiscardDrawnCard}
+            handleStartGame={this.handleStartGame}
+            hasGameStarted={hasGameStarted}
             endTurn={this.handleEndTurn}
             message={message}
             nextTurn={nextTurn}

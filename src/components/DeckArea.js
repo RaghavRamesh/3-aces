@@ -20,7 +20,8 @@ const DeckArea = (props) => {
     drawnCard,
     handleEndTurn,
     handleDiscardDrawnCard,
-    handleDrawCard
+    handleDrawCard,
+    hasGameStarted
   } = props;
   return (
     <div style={deckAreaStyle}>
@@ -48,7 +49,11 @@ const DeckArea = (props) => {
         gridColumnEnd: '3'
       }}>
         <label>{`${message}`}</label>
-        <button onClick={handleEndTurn}>End turn</button>
+        {hasGameStarted ? (
+          <button onClick={handleEndTurn}>End turn</button>
+        ) : (
+          <button onClick={handleStartGame}>Start game</button>
+        )}
       </div>
     </div>
   );
