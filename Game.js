@@ -144,6 +144,7 @@ class Game {
     this.deck = new Deck();
     this.deal();
     this.message = 'All players can see their respective cards';
+    this.specialCardMessage = '';
     this.lastInteraction = Date.now();
     this.swap = {
       swapInProgress: false,
@@ -177,6 +178,7 @@ class Game {
       gameId: this.gameId,
       deck: this.deck.getCards(),
       message: this.message,
+      specialCardMessage: this.specialCardMessage,
       isGame: true,
       nextTurn: this.nextTurn,
       swapInProgress: this.swap.swapInProgress,
@@ -200,17 +202,12 @@ class Game {
   }
 
   shuffleHand(whoIsPlaying, whoseCardsToShuffle) {
-    console.log('[Game#shuffle] whoIsPlaying:', whoIsPlaying, 'whoseCardsToShuffle:', whoseCardsToShuffle);
     if (whoseCardsToShuffle === 'P1') {
-      console.log('[Game#shuffle] p1 hand before shuffling:', this.player1Hand);
-      this.player1Hand.shuffle();
-      console.log('[Game#shuffle] p1 hand after shuffling:', this.player1Hand);
+      this.player1.hand.shuffle();
     } else if (whoseCardsToShuffle === 'P2') {
-      console.log('[Game#shuffle] p2 hand before shuffling:', this.player2Hand);
-      this.player2Hand.shuffle();
-      console.log('[Game#shuffle] p2 hand before shuffling:', this.player2Hand);
+      this.player2.hand.shuffle();
     }
-    this.message = `${whoIsPlaying} shuffled ${whoseCardsToShuffle}'s cards`;
+    this.specialCardMessage = `${whoIsPlaying} shuffled ${whoseCardsToShuffle}'s cards`;
   }
 
   revealHand(whoIsPlaying, whoseCardsToReveal) {
@@ -219,36 +216,33 @@ class Game {
     } else if (whoseCardsToReveal === 'P2') {
       this.player2.hand.setFaceUp(true);
     }
-    if (whoIsPlaying === whoseCardsToReveal) {
-      this.message = `${whoIsPlaying} can now see their cards`;
-    } else {
-      this.message = `${whoIsPlaying} can now see ${whoseCardsToReveal}'s cards`;
-    }
+    this.specialCardMessage = `${whoIsPlaying} has seen ${whoseCardsToReveal}'s cards`;
   }
 
-  swapCardPart1(whoIsPlaying, whichCardOfOpponentToSwap) {
+  swapCardPart1(whoIsPlaying, whoseCardToSwap, whichCardOfOpponentToSwap) {
     this.swap.swapInProgress = true;
     this.swap.whoIsPlaying = whoIsPlaying;
+    this.swap.opponent = whoseCardToSwap;
     this.swap.whichCardOfOpponentToSwap = whichCardOfOpponentToSwap;
     if (whoIsPlaying === 'P1' && whoseCardToSwap === 'P2') {
-      this.swap.cardOfOpponentToSwap = this.player2.hand.getCards()[whichCardOfOpponentToSwap];
+      this.swap.cardOfOpponentToSwap = this.player2.hand.cards[whichCardOfOpponentToSwap];
     } else if (whoIsPlaying === 'P2' && whoseCardToSwap === 'P1') {
-      this.swap.cardOfOpponentToSwap = this.player1.hand.getCards()[whichCardOfOpponentToSwap];
+      this.swap.cardOfOpponentToSwap = this.player1.hand.cards[whichCardOfOpponentToSwap];
     }
-    this.message = 'Choose one of your cards to swap.';
+    this.specialCardMessage = 'Choose one of your cards to swap';
   }
 
   swapCardPart2(whoIsPlaying, whichCardOfSelfToSwap) {
     if (whoIsPlaying === 'P1' && this.swap.opponent === 'P2') {
-      const cardOfSelf = this.player1.hand.getCards()[whichCardOfSelfToSwap];
-      this.player2.hand.replaceCard(cardOfSelf, this.swap.cardOfOpponentToSwap);
-      this.player1.hand.replaceCard(this.swap.cardOfOpponent, cardOfSelf);
+      const cardOfSelf = this.player1.hand.cards[whichCardOfSelfToSwap];
+      this.player2.hand.replaceCard(cardOfSelf, this.swap.whichCardOfOpponentToSwap);
+      this.player1.hand.replaceCard(this.swap.cardOfOpponentToSwap, whichCardOfSelfToSwap);
     } else if (whoIsPlaying === 'P2' && this.swap.opponent === 'P1') {
-      const cardOfSelf = this.player2.hand.getCards()[whichCardOfSelfToSwap];
-      this.player1.hand.replaceCard(cardOfSelf, this.swap.cardOfOpponentToSwap);
-      this.player2.hand.replaceCard(this.swap.cardOfOpponent, cardOfSelf);
+      const cardOfSelf = this.player2.hand.cards[whichCardOfSelfToSwap];
+      this.player1.hand.replaceCard(cardOfSelf, this.swap.whichCardOfOpponentToSwap);
+      this.player2.hand.replaceCard(this.swap.cardOfOpponentToSwap, whichCardOfSelfToSwap);
     }
-    this.message = `${whoIsPlaying} has replaced their card #${whichCardOfSelfToSwap + 1} with ${this.swap.opponent}'s card #${this.swap.whichCardOfOpponentToSwap + 1}`;
+    this.specialCardMessage = `${whoIsPlaying} has replaced their card #${whichCardOfSelfToSwap + 1} with ${this.swap.opponent}'s card #${this.swap.whichCardOfOpponentToSwap + 1}`;
   }
 
   discard(whoIsPlaying, card) {
@@ -261,6 +255,7 @@ class Game {
         } else if (whoIsPlaying === 'P2') {
           this.player1.enableShuffleCards = true;
         }
+        this.specialCardMessage = `${whoIsPlaying} can now shuffle an opponent's cards`
         break;
       case '10':
         if (whoIsPlaying === 'P1') {
@@ -268,6 +263,7 @@ class Game {
         } else if (whoIsPlaying === 'P2') {
           this.player1.enableRevealHand = true;
         }
+        this.specialCardMessage = `${whoIsPlaying} can now see an opponent's cards`;
         break;
       case 'K':
         if (whoIsPlaying === 'P1') {
@@ -275,6 +271,7 @@ class Game {
         } else if (whoIsPlaying === 'P2') {
           this.player2.enableRevealHand = true;
         }
+        this.specialCardMessage = `${whoIsPlaying} can now see their cards`;
         break;
       case 'Q':
         if (whoIsPlaying === 'P1') {
@@ -282,6 +279,7 @@ class Game {
         } else if (whoIsPlaying === 'P2') {
           this.player1.enableSwapCards = true;
         }
+        this.specialCardMessage = `${whoIsPlaying} can now swap one of their cards with an opponent's card`
         break;
       default:
         break;
@@ -305,6 +303,7 @@ class Game {
     this.player2.enableRevealHand = false;
     this.player2.enableShuffleCards = false;
     this.player2.enableSwapCards = false;
+    this.specialCardMessage = '';
     this.setPlayerTurn(this.nextTurn);
   }
 
@@ -341,6 +340,7 @@ class Game {
     } else if (whoIsPlaying === 'P2') {
       previousCardInHand = this.player2.hand.replaceCard(drawnCard, cardPosition);
     }
+    this.message = `${whoIsPlaying} replaced their card #${cardPosition + 1} with the drawn card`
     this.discard(whoIsPlaying, previousCardInHand);
   }
 
