@@ -12,9 +12,8 @@ class Game extends Component {
       ...props
     };
     this.handleRevealHand = this.handleRevealHand.bind(this);
+    this.handleHandCardClick = this.handleHandCardClick.bind(this);
     this.handleShuffleCards = this.handleShuffleCards.bind(this);
-    this.handleSwapCardPart1 = this.handleSwapCardPart1.bind(this);
-    this.handleSwapCardPart2 = this.handleSwapCardPart2.bind(this);
     this.handleDiscardDrawnCard = this.handleDiscardDrawnCard.bind(this);
     this.handleDrawCard = this.handleDrawCard.bind(this);
     this.handleStartGame = this.handleStartGame.bind(this);
@@ -32,23 +31,12 @@ class Game extends Component {
     this.setState({ ...data });
   }
 
-  handlePlayerChange(player) {
-    this.setState({ player });
-  }
-
-  handleRevealHand(whoseHandToReveal) {
+  makeRequest(url, body) {
     this.setState({ loading: true })
-    fetch('/api/reveal-hand?' + new URLSearchParams({
-      gameId: this.state.gameId,
-      whoIsPlaying: this.state.player,
-      whoseHandToReveal,
-    }))
+    fetch(url, body)
       .then(response => response.json())
       .then(({ data }) => {
-        this.updateGameState({
-          ...data,
-          loading: false
-        })
+        this.updateGameState({ ...data, loading: false })
       })
       .catch((error) => {
         console.error("Error:", error)
@@ -56,13 +44,66 @@ class Game extends Component {
       })
   }
 
-  handleShuffleCards(whoseCardsToShuffle) {
+  handleHandCardClick(whichCard, whoseHand) {
     const {
       gameId,
-      player
+      player,
+      drawnCard,
+      swapInProgress,
+      player1,
+      player2
     } = this.state;
-    this.setState({ loading: true })
-    fetch('/api/shuffle-hand', {
+    const discarding = whoIsPlaying === 'P1' ? player1.enableDiscardFromHand : player2.enableDiscardFromHand;
+    if (discarding) {
+      this.makeRequest('/api/keep-in-hand', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.strigify({
+          gameId,
+          whoIsPlaying: player,
+          drawnCard,
+          cardPosition: whichCard,
+        })
+      })
+    } else if (swapInProgress) {
+      this.makeRequest('/api/swap-card-part-2', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          gameId,
+          whoIsPlaying: player,
+          whichCardOfSelfToSwap: whichCard
+        })
+      })
+    } else {
+      this.makeRequest('/api/swap-card-part-1', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          gameId,
+          whoIsPlaying: player,
+          whoseCardToSwap: whoseHand,
+          whichCardOfOpponentToSwap: whichCard
+        })
+      })
+    }
+  }
+
+  handlePlayerChange(player) {
+    this.setState({ player });
+  }
+
+  handleRevealHand(whoseHandToReveal) {
+    this.makeRequest('/api/reveal-hand?' + new URLSearchParams({
+      gameId: this.state.gameId,
+      whoIsPlaying: this.state.player,
+      whoseHandToReveal,
+    }))
+  }
+
+  handleShuffleCards(whoseCardsToShuffle) {
+    const { gameId, player } = this.state;
+    this.makeRequest('/api/shuffle-hand', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -71,75 +112,11 @@ class Game extends Component {
         whoseCardsToShuffle
       })
     })
-      .then(response => response.json())
-      .then(({ data }) => {
-        this.updateGameState({ ...data, loading: false })
-      })
-      .catch((error) => {
-        console.error('Error:', error)
-        this.setState({ loading: false, message: error })
-      })
-  }
-
-  handleSwapCardPart1(whoseCardToSwap, whichCardOfOpponentToSwap) {
-    const {
-      gameId,
-      player,
-    } = this.state
-    this.setState({ loading: true })
-    fetch('/api/swap-card-part-1', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        gameId,
-        whoIsPlaying: player,
-        whoseCardToSwap,
-        whichCardOfOpponentToSwap
-      })
-    })
-      .then(response => response.json())
-      .then(({ data }) => {
-        this.updateGameState({ ...data, loading: false })
-      })
-      .catch((error) => {
-        console.error('Error:', error)
-        this.setState({ loading: false, message: error })
-      })
-  }
-
-  handleSwapCardPart2(whichCardOfSelfToSwap) {
-    const {
-      gameId,
-      player,
-    } = this.state;
-    this.setState({ loading: true })
-    fetch('/api/swap-card-part-2', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        gameId,
-        whoIsPlaying: player,
-        whichCardOfSelfToSwap,
-      })
-    })
-      .then(response => response.json())
-      .then(({ data }) => {
-        this.updateGameState({ ...data, loading: false })
-      })
-      .catch((error) => {
-        console.error('Error:', error)
-        this.setState({ loading: false, message: error })
-      })
   }
 
   handleDiscardDrawnCard() {
-    const {
-      gameId,
-      player,
-      drawnCard
-    } = this.state;
-    this.setState({ loading: true })
-    fetch('/api/discard-drawn-card', {
+    const { gameId, player, drawnCard } = this.state;
+    this.makeRequest('/api/discard-drawn-card', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -148,75 +125,34 @@ class Game extends Component {
         drawnCard
       })
     })
-      .then(response => response.json())
-      .then(({ data }) => {
-        this.updateGameState({ ...data, loading: false })
-      })
-      .catch((error) => {
-        console.log('Error:', error);
-        this.setState({ loading: false, message: error })
-      })
-
   }
 
   handleDrawCard() {
-    console.log('[handleDrawCard]');
-    const {
-      gameId,
-      player
-    } = this.state;
-    this.setState({ loading: true })
-    fetch('/api/draw-card?' + new URLSearchParams({
+    const { gameId, player } = this.state;
+    this.makeRequest('/api/draw-card?' + new URLSearchParams({
       gameId,
       whoIsPlaying: player
     }))
-      .then(response => response.json())
-      .then(({ data }) => {
-        this.updateGameState({ ...data, loading: false })
-      })
-      .catch((error) => {
-        console.log('Error:', error);
-        this.setState({ loading: false, message: error })
-      })
   }
 
   handleStartGame() {
-    this.setState({ loading: true })
-    fetch('/api/start-game', {
+    this.makeRequest('/api/start-game', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         gameId: this.state.gameId
       })
     })
-      .then(response => response.json())
-      .then(({ data }) => {
-        this.updateGameState({ ...data, loading: false })
-      })
-      .catch((error) => {
-        console.log('Error:', error);
-        this.setState({ loading: false, message: error })
-      })
-
   }
 
   handleEndTurn() {
-    this.setState({ loading: true })
-    fetch('/api/end-turn', {
+    this.makeRequest('/api/end-turn', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         gameId: this.state.gameId
       })
     })
-      .then(response => response.json())
-      .then(({ data }) => {
-        this.updateGameState({ ...data, loading: false })
-      })
-      .catch((error) => {
-        console.log('Error:', error);
-        this.setState({ loading: false, message: error })
-      })
   }
 
   render() {
@@ -271,9 +207,10 @@ class Game extends Component {
               handleShuffleCards={this.handleShuffleCards}
             />
             <PlayerHand
+              playerId='P1'
               hand={player1.hand}
-              handleSwapCardPart1={this.handleSwapCardPart1}
-              handleSwapCardPart2={this.handleSwapCardPart2}
+              enableDiscardFromHand={player1.enableDiscardFromHand}
+              handleHandCardClick={this.handleHandCardClick}
               swapInProgress={swapInProgress}
             />
           </div>
@@ -297,9 +234,10 @@ class Game extends Component {
           <div style={colStyle}></div>
           <div style={playerAreaStyle}>
             <PlayerHand
+              playerId='P2'
               hand={player2.hand}
-              handleSwapCardPart1={this.handleSwapCardPart1}
-              handleSwapCardPart2={this.handleSwapCardPart2}
+              enableDiscardFromHand={player2.enableDiscardFromHand}
+              handleHandCardClick={this.handleHandCardClick}
               swapInProgress={swapInProgress}
             />
             <PlayerOptions

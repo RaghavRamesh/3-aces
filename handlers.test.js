@@ -27,7 +27,7 @@ describe("New game and start game", () => {
     } = gameState
     expect(hasGameStarted).toBe(false)
     expect(deck.length).toBe(52 - 6)
-    expect(message).toBe('All players can see their respective cards')
+    expect(message).toBe('All players can see their respective cards. Press Start game when all are ready')
     expect(drawnCard).toBe(null)
     expect(nextTurn).toBe('P1')
     expect(player1.enableRevealHand).toBe(true)
@@ -77,12 +77,14 @@ describe("Drawing and discarding", () => {
     })
     expect(gameStateAfterDrawCard.deck.length).toBe(52 - 6 - 1)
     expect(gameStateAfterDrawCard.drawnCard.value).not.toBe(null)
+    expect(gameStateAfterDrawCard.player1.enableDiscardFromHand).toBe(true);
     expect(gameStateAfterDrawCard.message).toBe('You can either discard or replace with one of the cards in your hand')
     const gameStateAfterDiscardingCard = handleDiscardDrawnCard({
       gameId: 'test',
       whoIsPlaying: 'P1',
       drawnCard: gameStateAfterDrawCard.drawnCard
     })
+    expect(gameStateAfterDiscardingCard.player1.enableDiscardFromHand).toBe(false);
     expect(gameStateAfterDiscardingCard.topDiscardCard.value).toBe(gameStateAfterDrawCard.drawnCard.value)
     expect(gameStateAfterDiscardingCard.drawnCard).toBe(null)
     const gameStateAfterTurnEnds = handleEndTurn({ gameId: 'test' })
@@ -96,6 +98,7 @@ describe("Drawing and discarding", () => {
     const game = gamesMgr.getGame('test')
     handleStartGame({ gameId: 'test' })
     const gameStateAfterDrawingCard = handleDrawCard({ gameId: 'test', whoIsPlaying: 'P1' })
+    expect(gameStateAfterDrawingCard.player1.enableDiscardFromHand).toBe(true);
     const cardAtPosition0 = game.player1.hand.cards[0]
     const gameStateAfterReplacingDrawnCardWithCardInHand = handleKeepInHand({
       gameId: 'test',
@@ -103,6 +106,7 @@ describe("Drawing and discarding", () => {
       drawnCard: gameStateAfterDrawingCard.drawnCard,
       cardPosition: 0
     })
+    expect(gameStateAfterReplacingDrawnCardWithCardInHand.player1.enableDiscardFromHand).toBe(false);
     expect(gameStateAfterReplacingDrawnCardWithCardInHand.topDiscardCard).toEqual(cardAtPosition0)
     expect(game.player1.hand.cards[0]).toEqual(gameStateAfterDrawingCard.drawnCard)
     expect(gameStateAfterReplacingDrawnCardWithCardInHand.drawnCard).toBe(null);
@@ -129,6 +133,7 @@ describe("Drawing and discarding", () => {
 
     const game = gamesMgr.getGame('test')
     const gameStateAfterP2DrawingCard = handleDrawCard({ gameId: 'test', whoIsPlaying: 'P2' })
+    expect(gameStateAfterP2DrawingCard.player2.enableDiscardFromHand).toBe(true);
     const cardAtPosition1 = game.player2.hand.cards[1]
     const gameStateAfterReplacingDrawnCardWithCardInHand = handleKeepInHand({
       gameId: 'test',
@@ -136,6 +141,7 @@ describe("Drawing and discarding", () => {
       drawnCard: gameStateAfterP2DrawingCard.drawnCard,
       cardPosition: 1
     })
+    expect(gameStateAfterReplacingDrawnCardWithCardInHand.player2.enableDiscardFromHand).toBe(false);
     expect(gameStateAfterReplacingDrawnCardWithCardInHand.topDiscardCard).toEqual(cardAtPosition1)
     expect(game.player2.hand.cards[1]).toEqual(gameStateAfterP2DrawingCard.drawnCard)
     expect(gameStateAfterReplacingDrawnCardWithCardInHand.drawnCard).toBe(null);
@@ -478,10 +484,12 @@ describe("Ending game and playing again", () => {
     expect(gameStateAfterDiscardingLastCard.deck.length).toBe(0)
     const gameStateAfterLastTurnEnds = handleEndTurn({ gameId: 'test' })
     expect(gameStateAfterLastTurnEnds.isGameOver).toBe(true)
+    expect(gameStateAfterLastTurnEnds.player1.hand[0].value).not.toEqual('hidden')
+    expect(gameStateAfterLastTurnEnds.player2.hand[0].value).not.toEqual('hidden')
     expect(gameStateAfterLastTurnEnds.message).toBeOneOf(["It's a tie!", "P1 wins!", "P2 wins!"])
     const gameStateAfterPlayAgain = handlePlayAgain({ gameId: 'test' })
     expect(gameStateAfterPlayAgain.isGameOver).toBe(false)
-    expect(gameStateAfterPlayAgain.message).toEqual('All players can see their respective cards')
+    expect(gameStateAfterPlayAgain.message).toEqual('All players can see their respective cards. Press Start game when all are ready')
     expect(gameStateAfterPlayAgain.deck.length).toBe(52 - 6)
   })
 })

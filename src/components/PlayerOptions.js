@@ -9,6 +9,7 @@ const PlayerOptions = (props) => {
     playerName,
     playerId
   } = props;
+  // toggle show cards and hide cards
   return (
     <>
       <label>{playerName}</label>

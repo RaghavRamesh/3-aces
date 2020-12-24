@@ -91,6 +91,7 @@ app.post('/api/end-turn', (req, res) => {
 
 // Start game
 app.post('/api/start-game', (req, res) => {
+  const { gameId } = req.body
   const gameState = handleStartGame({ gameId })
   res.send({ gameState })
   io.emit('game-state-update', { gameState });

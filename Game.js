@@ -122,12 +122,14 @@ class Game {
     this.drawnCard = null;
     this.player1 = {
       hand: new Hand(),
+      enableDiscardFromHand: false,
       enableRevealHand: true,
       enableShuffleCards: false,
       enableSwapCards: false,
     };
     this.player2 = {
       hand: new Hand(),
+      enableDiscardFromHand: false,
       enableRevealHand: true,
       enableShuffleCards: false,
       enableSwapCards: false,
@@ -135,7 +137,7 @@ class Game {
     this.discardPile = [];
     this.deck = new Deck();
     this.deal();
-    this.message = 'All players can see their respective cards';
+    this.message = 'All players can see their respective cards. Press Start game when all are ready';
     this.specialCardMessage = '';
     this.lastInteraction = Date.now();
     this.swap = {
@@ -276,6 +278,11 @@ class Game {
       default:
         break;
     }
+    if (whoIsPlaying === 'P1') {
+      this.player1.enableDiscardFromHand = false;
+    } else if (whoIsPlaying === 'P2') {
+      this.player2.enableDiscardFromHand = false;
+    }
   }
 
   resetRound() {
@@ -289,9 +296,11 @@ class Game {
     }
     this.player1.hand.setFaceUp(false)
     this.player2.hand.setFaceUp(false)
+    this.player1.enableDiscardFromHand = false;
     this.player1.enableRevealHand = false;
     this.player1.enableShuffleCards = false;
     this.player1.enableSwapCards = false;
+    this.player2.enableDiscardFromHand = false;
     this.player2.enableRevealHand = false;
     this.player2.enableShuffleCards = false;
     this.player2.enableSwapCards = false;
@@ -317,12 +326,19 @@ class Game {
     this.message = this.determineWinner();
     this.isGameOver = true;
     this.nextTurn = null;
+    this.player1.hand.setFaceUp(true)
+    this.player2.hand.setFaceUp(true)
   }
 
-  draw() {
+  draw(whoIsPlaying) {
+    console.log('[Game#draw] whoIsPlaying:', whoIsPlaying)
     this.drawnCard = this.deck.draw();
+    if (whoIsPlaying === 'P1') {
+      this.player1.enableDiscardFromHand = true;
+    } else if (whoIsPlaying === 'P2') {
+      this.player2.enableDiscardFromHand = true;
+    }
     this.message = 'You can either discard or replace with one of the cards in your hand';
-    // enable hand cards for the player that's playing
     this.lastInteraction = Date.now()
   }
 
