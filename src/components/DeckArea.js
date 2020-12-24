@@ -21,7 +21,8 @@ const DeckArea = (props) => {
     handleEndTurn,
     handleDiscardDrawnCard,
     handleDrawCard,
-    hasGameStarted
+    hasGameStarted,
+    handleStartGame
   } = props;
   return (
     <div style={deckAreaStyle}>

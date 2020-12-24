@@ -9,8 +9,9 @@ import {
   handleShuffleHand,
   handleSwapCardPart1,
   handleSwapCardPart2,
+  handlePlayAgain,
   gamesMgr
-} from './server'
+} from './handlers'
 
 describe("New game and start game", () => {
   test('New game', () => {
@@ -398,13 +399,13 @@ describe("J: Shuffling an opponent's cards", () => {
     expect(gameStateAfterDiscardingCard.player2.enableShuffleCards).toBe(true)
     expect(gameStateAfterDiscardingCard.specialCardMessage).toEqual(`P1 can now shuffle an opponent's cards`)
     const game = gamesMgr.getGame('test')
-    console.log('Before shuffling: ', game.player2.hand.cards)
+    // console.log('Before shuffling: ', game.player2.hand.cards)
     const gameStateAfterShufflingCards = handleShuffleHand({
       gameId: 'test',
       whoIsPlaying: 'P1',
       whoseCardsToShuffle: 'P2'
     })
-    console.log('After shuffling: ', game.player2.hand.cards)
+    // console.log('After shuffling: ', game.player2.hand.cards)
     expect(gameStateAfterShufflingCards.specialCardMessage).toEqual(`P1 shuffled P2's cards`)
     const gameStateAfterTurnEnds = handleEndTurn({ gameId: 'test' })
     expect(gameStateAfterTurnEnds.player2.enableShuffleCards).toBe(false)
@@ -438,13 +439,13 @@ describe("J: Shuffling an opponent's cards", () => {
     expect(gameStateAfterDiscardingCard.player1.enableShuffleCards).toBe(true)
     expect(gameStateAfterDiscardingCard.specialCardMessage).toEqual(`P2 can now shuffle an opponent's cards`)
     const game = gamesMgr.getGame('test')
-    console.log('Before shuffling: ', game.player1.hand.cards)
+    // console.log('Before shuffling: ', game.player1.hand.cards)
     const gameStateAfterShufflingCards = handleShuffleHand({
       gameId: 'test',
       whoIsPlaying: 'P2',
       whoseCardsToShuffle: 'P1'
     })
-    console.log('After shuffling: ', game.player1.hand.cards)
+    // console.log('After shuffling: ', game.player1.hand.cards)
     expect(gameStateAfterShufflingCards.specialCardMessage).toEqual(`P2 shuffled P1's cards`)
     const gameStateAfterP2TurnEnds = handleEndTurn({ gameId: 'test' })
     expect(gameStateAfterP2TurnEnds.player1.enableShuffleCards).toBe(false)
@@ -456,7 +457,35 @@ describe("J: Shuffling an opponent's cards", () => {
 })
 
 describe("Ending game and playing again", () => {
-  test("", () => { })
+  test("Last round, determine result and play again", () => {
+    handleNewGame({ gameId: 'test' })
+    handleStartGame({ gameId: 'test' })
+    // TODO: need to prevent player from ending turn if they discarded a special card
+
+    const game = gamesMgr.getGame('test')
+    game.deck.cards = [{ value: 7, suit: 'Clubs' }]
+
+    const gameStateAfterDrawingLastCard = handleDrawCard({
+      gameId: 'test',
+      whoIsPlaying: 'P1'
+    })
+    const gameStateAfterDiscardingLastCard = handleDiscardDrawnCard({
+      gameId: 'test',
+      whoIsPlaying: 'P1',
+      drawnCard: gameStateAfterDrawingLastCard.drawnCard
+    })
+    expect(gameStateAfterDiscardingLastCard.topDiscardCard).toEqual(gameStateAfterDrawingLastCard.drawnCard)
+    expect(gameStateAfterDiscardingLastCard.deck.length).toBe(0)
+    const gameStateAfterLastTurnEnds = handleEndTurn({ gameId: 'test' })
+    expect(gameStateAfterLastTurnEnds.isGameOver).toBe(true)
+    expect(gameStateAfterLastTurnEnds.message).toBeOneOf(["It's a tie!", "P1 wins!", "P2 wins!"])
+    const gameStateAfterPlayAgain = handlePlayAgain({ gameId: 'test' })
+    expect(gameStateAfterPlayAgain.isGameOver).toBe(false)
+    expect(gameStateAfterPlayAgain.message).toEqual('All players can see their respective cards')
+    expect(gameStateAfterPlayAgain.deck.length).toBe(52 - 6)
+  })
 })
 
-describe("Clearing old games from memory", () => {})
+describe("Clearing old games from memory", () => {
+
+})

@@ -4,14 +4,6 @@ class Card {
     this.suit = suit
     this.value = value
   }
-
-  repr() {
-    return `${this.value} of ${this.suit}`;
-  }
-
-  getValue() {
-    return this.value;
-  }
 }
 
 class Deck {
@@ -45,7 +37,7 @@ class Deck {
   }
 
   draw() {
-    if (this.cards.length > 1) {
+    if (this.cards.length > 0) {
       return this.cards.pop();
     }
   }
@@ -330,6 +322,8 @@ class Game {
   draw() {
     this.drawnCard = this.deck.draw();
     this.message = 'You can either discard or replace with one of the cards in your hand';
+    // enable hand cards for the player that's playing
+    this.lastInteraction = Date.now()
   }
 
   keepInHand(whoIsPlaying, drawnCard, cardPosition) {
@@ -345,17 +339,19 @@ class Game {
   }
 
   checkIfDeckIsEmpty() {
-    return this.deck.length === 0
+    return this.deck.cards.length === 0
   }
 
   determineWinner() {
     const player1HandValue = this.player1.hand.getValue();
     const player2HandValue = this.player2.hand.getValue();
-    let result = "It's a tie!";
+    let result = "";
     if (player1HandValue > player2HandValue) {
       result = 'P2 wins!';
     } else if (player1HandValue < player2HandValue) {
       result = 'P1 wins!';
+    } else {
+      result = "It's a tie!"
     }
     return result;
   }
