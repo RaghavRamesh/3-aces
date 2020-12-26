@@ -51,14 +51,14 @@ class Game extends Component {
       drawnCard,
       swapInProgress,
       player1,
-      player2
+      player2,
     } = this.state;
-    const discarding = whoIsPlaying === 'P1' ? player1.enableDiscardFromHand : player2.enableDiscardFromHand;
+    const discarding = player === 'P1' ? player1.enableDiscardFromHand : player2.enableDiscardFromHand;
     if (discarding) {
       this.makeRequest('/api/keep-in-hand', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.strigify({
+        body: JSON.stringify({
           gameId,
           whoIsPlaying: player,
           drawnCard,
@@ -167,7 +167,9 @@ class Game extends Component {
       swapInProgress,
       topDiscardCard,
       drawnCard,
-      hasGameStarted
+      hasGameStarted,
+      disableDrawing,
+      disableEndTurn
     } = this.state;
 
     const colStyle = {
@@ -224,11 +226,13 @@ class Game extends Component {
             handleDiscardDrawnCard={this.handleDiscardDrawnCard}
             handleStartGame={this.handleStartGame}
             hasGameStarted={hasGameStarted}
-            endTurn={this.handleEndTurn}
+            handleEndTurn={this.handleEndTurn}
             message={message}
             nextTurn={nextTurn}
             topDiscardCard={topDiscardCard}
             drawnCard={drawnCard}
+            disableDrawing={disableDrawing}
+            disableEndTurn={disableEndTurn}
           />
           <div style={colStyle}></div>
           <div style={colStyle}></div>

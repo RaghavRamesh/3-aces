@@ -23,9 +23,13 @@ describe("New game and start game", () => {
       message,
       deck,
       player1,
-      player2
+      player2,
+      disableDrawing,
+      disableEndTurn
     } = gameState
     expect(hasGameStarted).toBe(false)
+    expect(disableDrawing).toBe(true)
+    expect(disableEndTurn).toBe(true)
     expect(deck.length).toBe(52 - 6)
     expect(message).toBe('All players can see their respective cards. Press Start game when all are ready')
     expect(drawnCard).toBe(null)
@@ -49,14 +53,16 @@ describe("New game and start game", () => {
     })
     expect(gameStateBeforeStartingGame.player1.hand[0].value).not.toEqual('hidden')
     expect(gameStateBeforeStartingGame.player2.hand[0].value).not.toEqual('hidden')
+    expect(gameStateBeforeStartingGame.disableDrawing).toBe(true)
     const gameState = handleStartGame({ gameId: 'test' })
     const {
       hasGameStarted,
       gameId,
       player1,
-      player2
+      player2,
+      disableDrawing,
     } = gameState
-
+    expect(disableDrawing).toBe(false);
     expect(gameId).toBe('test')
     expect(hasGameStarted).toBe(true)
     expect(player1.hand[0]).toEqual('hidden')
@@ -75,6 +81,7 @@ describe("Drawing and discarding", () => {
       gameId: 'test',
       whoIsPlaying: 'P1'
     })
+    expect(gameStateAfterDrawCard.disableDrawing).toBe(true)
     expect(gameStateAfterDrawCard.deck.length).toBe(52 - 6 - 1)
     expect(gameStateAfterDrawCard.drawnCard.value).not.toBe(null)
     expect(gameStateAfterDrawCard.player1.enableDiscardFromHand).toBe(true);
@@ -90,6 +97,7 @@ describe("Drawing and discarding", () => {
     const gameStateAfterTurnEnds = handleEndTurn({ gameId: 'test' })
     expect(gameStateAfterTurnEnds.message).toEqual(`P2's turn`)
     expect(gameStateAfterTurnEnds.nextTurn).toEqual('P2')
+    expect(gameStateAfterTurnEnds.disableDrawing).toBe(false)
     gamesMgr.removeGame('test')
   })
 
@@ -168,6 +176,7 @@ describe("Q: Swapping with an opponent's cards", () => {
     const game = gamesMgr.getGame('test')
     const cardOfOppositionBeforeSwap = game.player2.hand.cards[2];
     const cardOfSelfBeforeSwap = game.player1.hand.cards[1];
+    expect(gameStateAfterDiscardingCard.disableEndTurn).toBe(true);
     expect(gameStateAfterDiscardingCard.topDiscardCard).toEqual(gameStateAfterDrawingCard.drawnCard)
     expect(gameStateAfterDiscardingCard.player2.enableSwapCards).toBe(true)
     expect(gameStateAfterDiscardingCard.specialCardMessage).toEqual(`P1 can now swap one of their cards with an opponent's card`)
@@ -189,6 +198,7 @@ describe("Q: Swapping with an opponent's cards", () => {
     expect(cardOfSelfBeforeSwap).toEqual(cardOfOppositionAfterSwap)
     expect(cardOfOppositionBeforeSwap).toEqual(cardOfSelfAfterSwap)
     expect(gameStateAfterSwapCardStep2.specialCardMessage).toEqual(`P1 has replaced their card #2 with P2's card #3`)
+    expect(gameStateAfterSwapCardStep2.disableEndTurn).toBe(false)
     const gameStateAfterTurnEnds = handleEndTurn({ gameId: 'test' })
     expect(gameStateAfterTurnEnds.player2.enableSwapCards).toBe(false)
     expect(gameStateAfterTurnEnds.message).toEqual(`P2's turn`)
@@ -211,6 +221,7 @@ describe("Q: Swapping with an opponent's cards", () => {
     expect(gameStateAfterP1TurnEnds.nextTurn).toEqual('P2')
 
     const gameStateAfterP2DrawingCard = handleDrawCard({ gameId: 'test', whoIsPlaying: 'P1' })
+    expect(gameStateAfterP2DrawingCard.disableEndTurn).toBe(true);
     gameStateAfterP2DrawingCard.drawnCard = { value: 'Q', suit: 'Spades' };
     const gameStateAfterDiscardingCard = handleDiscardDrawnCard({
       gameId: 'test',
@@ -231,6 +242,7 @@ describe("Q: Swapping with an opponent's cards", () => {
     })
     expect(gameStateAfterSwapCardStep1.swapInProgress).toBe(true)
     expect(gameStateAfterSwapCardStep1.specialCardMessage).toEqual(`Choose one of your cards to swap`)
+    expect(gameStateAfterSwapCardStep1.disableEndTurn).toBe(true);
     const gameStateAfterSwapCardStep2 = handleSwapCardPart2({
       gameId: 'test',
       whoIsPlaying: 'P2',
@@ -241,6 +253,7 @@ describe("Q: Swapping with an opponent's cards", () => {
     expect(cardOfSelfBeforeSwap).toEqual(cardOfOppositionAfterSwap)
     expect(cardOfOppositionBeforeSwap).toEqual(cardOfSelfAfterSwap)
     expect(gameStateAfterSwapCardStep2.specialCardMessage).toEqual(`P2 has replaced their card #3 with P1's card #1`)
+    expect(gameStateAfterSwapCardStep2.disableEndTurn).toBe(false)
     const gameStateAfterP2TurnEnds = handleEndTurn({ gameId: 'test' })
     expect(gameStateAfterP2TurnEnds.player1.enableSwapCards).toBe(false)
     expect(gameStateAfterP2TurnEnds.message).toEqual(`P1's turn`)
@@ -255,12 +268,14 @@ describe("10: Seeing an opponent's cards", () => {
     handleNewGame({ gameId: 'test' })
     handleStartGame({ gameId: 'test' })
     const gameStateAfterDrawingCard = handleDrawCard({ gameId: 'test', whoIsPlaying: 'P1' })
+    expect(gameStateAfterDrawingCard.disableEndTurn).toBe(true);
     gameStateAfterDrawingCard.drawnCard = { value: '10', suit: 'Clubs' };
     const gameStateAfterDiscardingCard = handleDiscardDrawnCard({
       gameId: 'test',
       whoIsPlaying: 'P1',
       drawnCard: gameStateAfterDrawingCard.drawnCard
     })
+    expect(gameStateAfterDiscardingCard.disableEndTurn).toBe(true);
     expect(gameStateAfterDiscardingCard.topDiscardCard).toEqual(gameStateAfterDrawingCard.drawnCard)
     expect(gameStateAfterDiscardingCard.player2.enableRevealHand).toBe(true)
     expect(gameStateAfterDiscardingCard.specialCardMessage).toEqual(`P1 can now see an opponent's cards`)
@@ -272,6 +287,7 @@ describe("10: Seeing an opponent's cards", () => {
     expect(gameStateAfterRevealingHand.player2.hand[0]).not.toBe('hidden')
     expect(gameStateAfterRevealingHand.player2.hand[1]).not.toBe('hidden')
     expect(gameStateAfterRevealingHand.player2.hand[2]).not.toBe('hidden')
+    expect(gameStateAfterRevealingHand.disableEndTurn).toBe(false);
     const gameStateAfterTurnEnds = handleEndTurn({ gameId: 'test' })
     expect(gameStateAfterTurnEnds.player2.enableRevealHand).toBe(false)
     expect(gameStateAfterTurnEnds.message).toEqual(`P2's turn`)
@@ -284,6 +300,7 @@ describe("10: Seeing an opponent's cards", () => {
     handleNewGame({ gameId: 'test' })
     handleStartGame({ gameId: 'test' })
     const gameStateAfterP1DrawingCard = handleDrawCard({ gameId: 'test', whoIsPlaying: 'P1' })
+    expect(gameStateAfterP1DrawingCard.disableEndTurn).toBe(true);
     handleDiscardDrawnCard({
       gameId: 'test',
       whoIsPlaying: 'P1',
@@ -295,12 +312,14 @@ describe("10: Seeing an opponent's cards", () => {
 
     const gameStateAfterP2DrawingCard = handleDrawCard({ gameId: 'test', whoIsPlaying: 'P2' })
     gameStateAfterP2DrawingCard.drawnCard = { value: '10', suit: 'Clubs' };
+    expect(gameStateAfterP2DrawingCard.disableEndTurn).toBe(true);
     const gameStateAfterDiscardingCard = handleDiscardDrawnCard({
       gameId: 'test',
       whoIsPlaying: 'P2',
       drawnCard: gameStateAfterP2DrawingCard.drawnCard
     })
     expect(gameStateAfterDiscardingCard.topDiscardCard).toEqual(gameStateAfterP2DrawingCard.drawnCard)
+    expect(gameStateAfterDiscardingCard.disableEndTurn).toBe(true);
     expect(gameStateAfterDiscardingCard.player1.enableRevealHand).toBe(true)
     expect(gameStateAfterDiscardingCard.specialCardMessage).toEqual(`P2 can now see an opponent's cards`)
     const gameStateAfterRevealingHand = handleRevealHand({
@@ -311,6 +330,7 @@ describe("10: Seeing an opponent's cards", () => {
     expect(gameStateAfterRevealingHand.player1.hand[0]).not.toBe('hidden')
     expect(gameStateAfterRevealingHand.player1.hand[1]).not.toBe('hidden')
     expect(gameStateAfterRevealingHand.player1.hand[2]).not.toBe('hidden')
+    expect(gameStateAfterRevealingHand.disableEndTurn).toBe(false)
     const gameStateAfterP2TurnEnds = handleEndTurn({ gameId: 'test' })
     expect(gameStateAfterP2TurnEnds.player1.enableRevealHand).toBe(false)
     expect(gameStateAfterP2TurnEnds.message).toEqual(`P1's turn`)
@@ -325,6 +345,7 @@ describe("K: Seeing one's own cards", () => {
     handleNewGame({ gameId: 'test' })
     handleStartGame({ gameId: 'test' })
     const gameStateAfterDrawingCard = handleDrawCard({ gameId: 'test', whoIsPlaying: 'P1' })
+    expect(gameStateAfterDrawingCard.disableEndTurn).toBe(true)
     gameStateAfterDrawingCard.drawnCard = { value: 'K', suit: 'Hearts' };
     const gameStateAfterDiscardingCard = handleDiscardDrawnCard({
       gameId: 'test',
@@ -332,6 +353,7 @@ describe("K: Seeing one's own cards", () => {
       drawnCard: gameStateAfterDrawingCard.drawnCard
     })
     expect(gameStateAfterDiscardingCard.topDiscardCard).toEqual(gameStateAfterDrawingCard.drawnCard)
+    expect(gameStateAfterDiscardingCard.disableEndTurn).toBe(true)
     expect(gameStateAfterDiscardingCard.player1.enableRevealHand).toBe(true)
     expect(gameStateAfterDiscardingCard.specialCardMessage).toEqual(`P1 can now see their cards`)
     const gameStateAfterRevealingHand = handleRevealHand({
@@ -342,6 +364,7 @@ describe("K: Seeing one's own cards", () => {
     expect(gameStateAfterRevealingHand.player1.hand[0]).not.toBe('hidden')
     expect(gameStateAfterRevealingHand.player1.hand[1]).not.toBe('hidden')
     expect(gameStateAfterRevealingHand.player1.hand[2]).not.toBe('hidden')
+    expect(gameStateAfterRevealingHand.disableEndTurn).toBe(false)
     const gameStateAfterTurnEnds = handleEndTurn({ gameId: 'test' })
     expect(gameStateAfterTurnEnds.player1.enableRevealHand).toBe(false)
     expect(gameStateAfterTurnEnds.message).toEqual(`P2's turn`)
@@ -371,6 +394,7 @@ describe("K: Seeing one's own cards", () => {
       drawnCard: gameStateAfterP2DrawingCard.drawnCard
     })
     expect(gameStateAfterDiscardingCard.topDiscardCard).toEqual(gameStateAfterP2DrawingCard.drawnCard)
+    expect(gameStateAfterDiscardingCard.disableEndTurn).toBe(true)
     expect(gameStateAfterDiscardingCard.player2.enableRevealHand).toBe(true)
     expect(gameStateAfterDiscardingCard.specialCardMessage).toEqual(`P2 can now see their cards`)
     const gameStateAfterRevealingHand = handleRevealHand({
@@ -381,6 +405,7 @@ describe("K: Seeing one's own cards", () => {
     expect(gameStateAfterRevealingHand.player2.hand[0]).not.toBe('hidden')
     expect(gameStateAfterRevealingHand.player2.hand[1]).not.toBe('hidden')
     expect(gameStateAfterRevealingHand.player2.hand[2]).not.toBe('hidden')
+    expect(gameStateAfterRevealingHand.disableEndTurn).toBe(false)
     const gameStateAfterP2TurnEnds = handleEndTurn({ gameId: 'test' })
     expect(gameStateAfterP2TurnEnds.player2.enableRevealHand).toBe(false)
     expect(gameStateAfterP2TurnEnds.message).toEqual(`P1's turn`)
@@ -401,6 +426,7 @@ describe("J: Shuffling an opponent's cards", () => {
       whoIsPlaying: 'P1',
       drawnCard: gameStateAfterDrawingCard.drawnCard
     })
+    expect(gameStateAfterDiscardingCard.disableEndTurn).toBe(true)
     expect(gameStateAfterDiscardingCard.topDiscardCard).toEqual(gameStateAfterDrawingCard.drawnCard)
     expect(gameStateAfterDiscardingCard.player2.enableShuffleCards).toBe(true)
     expect(gameStateAfterDiscardingCard.specialCardMessage).toEqual(`P1 can now shuffle an opponent's cards`)
@@ -413,6 +439,7 @@ describe("J: Shuffling an opponent's cards", () => {
     })
     // console.log('After shuffling: ', game.player2.hand.cards)
     expect(gameStateAfterShufflingCards.specialCardMessage).toEqual(`P1 shuffled P2's cards`)
+    expect(gameStateAfterShufflingCards.disableEndTurn).toBe(false)
     const gameStateAfterTurnEnds = handleEndTurn({ gameId: 'test' })
     expect(gameStateAfterTurnEnds.player2.enableShuffleCards).toBe(false)
     expect(gameStateAfterTurnEnds.message).toEqual(`P2's turn`)
@@ -441,6 +468,7 @@ describe("J: Shuffling an opponent's cards", () => {
       whoIsPlaying: 'P2',
       drawnCard: gameStateAfterP2DrawingCard.drawnCard
     })
+    expect(gameStateAfterDiscardingCard.disableEndTurn).toBe(true)
     expect(gameStateAfterDiscardingCard.topDiscardCard).toEqual(gameStateAfterP2DrawingCard.drawnCard)
     expect(gameStateAfterDiscardingCard.player1.enableShuffleCards).toBe(true)
     expect(gameStateAfterDiscardingCard.specialCardMessage).toEqual(`P2 can now shuffle an opponent's cards`)
@@ -453,6 +481,7 @@ describe("J: Shuffling an opponent's cards", () => {
     })
     // console.log('After shuffling: ', game.player1.hand.cards)
     expect(gameStateAfterShufflingCards.specialCardMessage).toEqual(`P2 shuffled P1's cards`)
+    expect(gameStateAfterShufflingCards.disableEndTurn).toBe(false)
     const gameStateAfterP2TurnEnds = handleEndTurn({ gameId: 'test' })
     expect(gameStateAfterP2TurnEnds.player1.enableShuffleCards).toBe(false)
     expect(gameStateAfterP2TurnEnds.message).toEqual(`P1's turn`)
@@ -466,8 +495,6 @@ describe("Ending game and playing again", () => {
   test("Last round, determine result and play again", () => {
     handleNewGame({ gameId: 'test' })
     handleStartGame({ gameId: 'test' })
-    // TODO: need to prevent player from ending turn if they discarded a special card
-
     const game = gamesMgr.getGame('test')
     game.deck.cards = [{ value: 7, suit: 'Clubs' }]
 

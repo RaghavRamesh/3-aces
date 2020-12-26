@@ -120,6 +120,7 @@ class Game {
     this.isGameOver = false;
     this.gameId = gameId;
     this.drawnCard = null;
+    this.disableDrawing = true;
     this.player1 = {
       hand: new Hand(),
       enableDiscardFromHand: false,
@@ -149,6 +150,7 @@ class Game {
       cardOfOpponentToSwap: null
     };
     this.hasGameStarted = false;
+    this.disableEndTurn = true;
   }
 
   startGame() {
@@ -180,7 +182,9 @@ class Game {
         ? this.discardPile[this.discardPile.length - 1]
         : null,
       drawnCard: this.drawnCard,
-      hasGameStarted: this.hasGameStarted
+      hasGameStarted: this.hasGameStarted,
+      disableDrawing: this.disableDrawing,
+      disableEndTurn: this.disableEndTurn
     }
   }
 
@@ -202,6 +206,7 @@ class Game {
       this.player2.hand.shuffle();
     }
     this.specialCardMessage = `${whoIsPlaying} shuffled ${whoseCardsToShuffle}'s cards`;
+    this.disableEndTurn = false;
   }
 
   revealHand(whoIsPlaying, whoseCardsToReveal) {
@@ -211,6 +216,7 @@ class Game {
       this.player2.hand.setFaceUp(true);
     }
     this.specialCardMessage = `${whoIsPlaying} has seen ${whoseCardsToReveal}'s cards`;
+    this.disableEndTurn = false;
   }
 
   swapCardPart1(whoIsPlaying, whoseCardToSwap, whichCardOfOpponentToSwap) {
@@ -237,6 +243,7 @@ class Game {
       this.player2.hand.replaceCard(this.swap.cardOfOpponentToSwap, whichCardOfSelfToSwap);
     }
     this.specialCardMessage = `${whoIsPlaying} has replaced their card #${whichCardOfSelfToSwap + 1} with ${this.swap.opponent}'s card #${this.swap.whichCardOfOpponentToSwap + 1}`;
+    this.disableEndTurn = false;
   }
 
   discard(whoIsPlaying, card) {
@@ -250,6 +257,7 @@ class Game {
           this.player1.enableShuffleCards = true;
         }
         this.specialCardMessage = `${whoIsPlaying} can now shuffle an opponent's cards`
+        this.disableEndTurn = true;
         break;
       case '10':
         if (whoIsPlaying === 'P1') {
@@ -258,6 +266,7 @@ class Game {
           this.player1.enableRevealHand = true;
         }
         this.specialCardMessage = `${whoIsPlaying} can now see an opponent's cards`;
+        this.disableEndTurn = true;
         break;
       case 'K':
         if (whoIsPlaying === 'P1') {
@@ -266,6 +275,7 @@ class Game {
           this.player2.enableRevealHand = true;
         }
         this.specialCardMessage = `${whoIsPlaying} can now see their cards`;
+        this.disableEndTurn = true;
         break;
       case 'Q':
         if (whoIsPlaying === 'P1') {
@@ -274,8 +284,10 @@ class Game {
           this.player1.enableSwapCards = true;
         }
         this.specialCardMessage = `${whoIsPlaying} can now swap one of their cards with an opponent's card`
+        this.disableEndTurn = true;
         break;
       default:
+        this.disableEndTurn = false;
         break;
     }
     if (whoIsPlaying === 'P1') {
@@ -294,6 +306,8 @@ class Game {
       cardOfOpponentToSwap: null,
       whichCardOfOpponentToSwap: null
     }
+    this.disableEndTurn = true;
+    this.disableDrawing = false;
     this.player1.hand.setFaceUp(false)
     this.player2.hand.setFaceUp(false)
     this.player1.enableDiscardFromHand = false;
@@ -339,6 +353,8 @@ class Game {
       this.player2.enableDiscardFromHand = true;
     }
     this.message = 'You can either discard or replace with one of the cards in your hand';
+    this.disableDrawing = true;
+    this.disableEndTurn = true;
     this.lastInteraction = Date.now()
   }
 
