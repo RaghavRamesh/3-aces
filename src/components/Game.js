@@ -169,12 +169,13 @@ class Game extends Component {
       drawnCard,
       hasGameStarted,
       disableDrawing,
-      disableEndTurn
+      disableEndTurn,
+      specialCardMessage
     } = this.state;
 
     const colStyle = {
       border: '1px solid red',
-      minHeight: '200px'
+      // minHeight: '200px'
     };
     const playerAreaStyle = {
       ...colStyle,
@@ -228,6 +229,7 @@ class Game extends Component {
             hasGameStarted={hasGameStarted}
             handleEndTurn={this.handleEndTurn}
             message={message}
+            specialCardMessage={specialCardMessage}
             nextTurn={nextTurn}
             topDiscardCard={topDiscardCard}
             drawnCard={drawnCard}

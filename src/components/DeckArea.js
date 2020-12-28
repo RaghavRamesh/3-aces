@@ -24,7 +24,8 @@ const DeckArea = (props) => {
     hasGameStarted,
     handleStartGame,
     disableDrawing,
-    disableEndTurn
+    disableEndTurn,
+    specialCardMessage,
   } = props;
   return (
     <div style={deckAreaStyle}>
@@ -33,6 +34,12 @@ const DeckArea = (props) => {
         'gridColumnEnd': 5
       }}>
         {`${nextTurn}'s turn`}
+      </label>
+      <label style={{
+        'gridColumnStart': 1,
+        'gridColumnEnd': 5
+      }}>
+        {specialCardMessage}
       </label>
       <div style={{
         'gridColumnStart': 1,

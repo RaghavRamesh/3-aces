@@ -10,10 +10,15 @@ const PlayerOptions = (props) => {
     playerId
   } = props;
   // toggle show cards and hide cards
+  const gridItemStyle = {
+    height: '32px',
+    width: '96px'
+  }
   return (
     <>
-      <label>{playerName}</label>
+      <label style={gridItemStyle}>{playerName}</label>
       <button
+        style={gridItemStyle}
         onClick={() => {
           handleRevealHand(playerId)
         }}
@@ -22,6 +27,7 @@ const PlayerOptions = (props) => {
         Show cards
       </button>
       <button
+        style={gridItemStyle}
         disabled={!enableShuffleCards}
         onClick={() => {
           handleShuffleCards(playerId)
